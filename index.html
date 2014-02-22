@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>pdftrick.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id="background"></div>
+<div id='container'>
+  <div class='section'>
+    <div class='docs'><h1>pdftrick.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <h1>One weird PDF trick</h1>
+<p>I have some really large PDF files of manuscript materials with
+OCR.  10,000 pages worth and I don't have enough room for them.
+They are in the 50M to 500M range per file.  And they need to be up
+this week for a grant deadline.  So I'm looking around the google
+for some way to shrink the pdf files.  I came across this:
+<a href="http://askubuntu.com/a/243753">askubuntu</a></p>
+<pre><code>pdf2ps input.pdf output.ps
+ps2pdf output.ps output.pdf
+</code></pre>
+<p>Okay, about 8× compression!  Great, convert to postscript and back.
+The project manager asks "is the OCR still good?"  I rip the text.
+a n d  i t  h as a l l  t h i s  w e i r d spaces in it.</p>
+<p>Long and the short of it: I found that if I use <code>pdftops</code> from
+<a href="http://poppler.freedesktop.org">Poppler</a> to create the postscript
+file but use <code>ps2pdf</code> from <a href="http://www.ghostscript.com">Ghostscript</a>
+to create the new PDF file; I still get 8× compression, and the OCR
+looks the same as before.  I guess poppler is better at writing
+postscript, and that ghostscript is better at writting PDF.</p>
+<p><a href="https://github.com/tingletech/pdftrick">This script</a> automates the
+process of running poppler and then ghostscript on a PDF to get
+this magic.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <pre><code>usage: pdftrick [-h] before [after]
+
+one weird PDF trick
+
+positional arguments:
+  before      PDF (before)
+  after       PDF (after)
+
+optional arguments:
+  -h, --help  show this help message and exit
+</code></pre>
+<p>First argument is the PDF file you want to shrink.</p>
+<p>Second argument is optional.</p>
+<p>If one argement is given, the large file is replaced with a new
+smaller file if the compression ratio is greater than 1.2.</p>
+<p>If two arguments are given, the second argument is the path
+to put the output file.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s">&quot;one weird PDF trick&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;before&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;PDF (before)&quot;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="n">extant_file</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;after&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s">&quot;?&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;PDF (after)&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <ul>
+<li>TODO argument: compression ratio cutoff</li>
+<li>TODO argument: logging</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">argv</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;pdftops&#39;</span><span class="p">):</span>   <span class="c"># use poppler to create a .ps</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need pdftops from poppler&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;ps2pdf&#39;</span><span class="p">):</span>    <span class="c"># and use ghostscript to create a .pdf</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need ps2pdf from ghostscript&quot;</span><span class="p">)</span>
+
+    <span class="n">postscript</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.ps&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;popgho&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">o_pdf</span> <span class="o">=</span> <span class="n">argv</span><span class="o">.</span><span class="n">before</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_pdf</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">o_pdf</span><span class="p">,</span> <span class="s">&#39;.new.pdf&#39;</span><span class="p">])</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>swallow all stderr and stdout</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s">&#39;pdftops&#39;</span><span class="p">,</span> <span class="n">o_pdf</span><span class="p">,</span> <span class="n">postscript</span><span class="p">],</span>
+                              <span class="n">stdout</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s">&#39;ps2pdf&#39;</span><span class="p">,</span> <span class="n">postscript</span><span class="p">,</span> <span class="n">n_pdf</span><span class="p">],</span>
+                              <span class="n">stdout</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="n">o_size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">o_pdf</span><span class="p">)</span>
+    <span class="n">n_size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">n_pdf</span><span class="p">)</span>
+    <span class="n">compression_ratio</span> <span class="o">=</span> <span class="n">o_size</span><span class="o">/</span><span class="n">n_size</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">argv</span><span class="o">.</span><span class="n">after</span><span class="p">):</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">n_pdf</span><span class="p">,</span> <span class="n">argv</span><span class="o">.</span><span class="n">after</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;compression: {1}; created: {0}&quot;</span>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">argv</span><span class="o">.</span><span class="n">after</span><span class="p">,</span> <span class="n">compression_ratio</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">compression_ratio</span> <span class="o">&gt;</span> <span class="mf">1.2</span><span class="p">):</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">n_pdf</span><span class="p">,</span> <span class="n">o_pdf</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;compression: {1}; overwrite: {0}&quot;</span>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">o_pdf</span><span class="p">,</span> <span class="n">compression_ratio</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">postscript</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;compression: {0}; not worth it, deleted new file&quot;</span>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression_ratio</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <p>like the unix <code>which</code> command</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">which</span><span class="p">(</span><span class="n">program</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p><a href="http://stackoverflow.com/a/377028/1763984">stackoverflow</a></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span> <span class="nf">is_exe</span><span class="p">(</span><span class="n">fpath</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">fpath</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">fpath</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">X_OK</span><span class="p">)</span>
+
+    <span class="n">fpath</span><span class="p">,</span> <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">program</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fpath</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">is_exe</span><span class="p">(</span><span class="n">program</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">program</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&quot;PATH&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">pathsep</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;&quot;&#39;</span><span class="p">)</span>
+            <span class="n">exe_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">program</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_exe</span><span class="p">(</span><span class="n">exe_file</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">exe_file</span>
+
+    <span class="k">return</span> <span class="bp">None</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <p><code>Type</code> for argparse - checks that file exists but does not open.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">extant_file</span><span class="p">(</span><span class="n">x</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p><a href="http://stackoverflow.com/a/11541495/1763984">stackoverflow</a></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentError</span><span class="p">(</span><span class="s">&quot;{0} does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">x</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <p>main() idiom for importing into REPL for debugging</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <p>Copyright © 2014, Regents of the University of California
+All rights reserved.</p>
+<p>Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:</p>
+<ul>
+<li>Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.</li>
+<li>Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.</li>
+<li>Neither the name of the University of California nor the names of its
+  contributors may be used to endorse or promote products derived from this
+  software without specific prior written permission.</li>
+</ul>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>
