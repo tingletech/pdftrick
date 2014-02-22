@@ -40,6 +40,7 @@ import tempfile
 import subprocess
 import os
 import shutil
+import contextlib
 
 
 def main(argv=None):
@@ -51,9 +52,10 @@ def main(argv=None):
         positional arguments:
           before      PDF (before)
           after       PDF (after)
- 
+
         optional arguments:
           -h, --help  show this help message and exit
+          -t TEMPDIR, --tempdir TEMPDIR
 
     First argument is the PDF file you want to shrink.
 
@@ -78,15 +80,19 @@ def main(argv=None):
         argv = parser.parse_args()
 
     if argv.tempdir:
-        # tell python tempfile where to make temp files
         tempfile.tempdir = argv.tempdir
 
+    # check that we have the tools we are wrapping
     if not which('pdftops'):   # use poppler to create a .ps
         raise Exception("need pdftops from poppler")
     if not which('ps2pdf'):    # and use ghostscript to create a .pdf
         raise Exception("need ps2pdf from ghostscript")
 
-    tempdir = tempfile.mkdtemp(prefix='popgho')
+    with make_temp_directory(prefix='popgho') as tempdir:
+        main_with_temp(tempdir, argv)
+
+
+def main_with_temp(tempdir, argv):
     os.environ.update({'TMPDIR': tempdir})  # for ghostscript
     postscript = os.path.join(tempdir, 'poppler.ps')
     o_pdf = argv.before[0]
@@ -146,6 +152,16 @@ def extant_file(x):
     return x
 
 
+@contextlib.contextmanager
+def make_temp_directory(prefix):
+    """way to clean up a temporary folder
+    [stackoverflow](http://stackoverflow.com/a/13379969/1763984)
+    """
+    temp_dir = tempfile.mkdtemp(prefix=prefix)
+    yield temp_dir
+    shutil.rmtree(temp_dir)
+
+
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
@@ -178,4 +194,3 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
-
