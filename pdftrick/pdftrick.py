@@ -80,18 +80,17 @@ def main(argv=None):
     if argv.tempdir:
         # tell python tempfile where to make temp files
         tempfile.tempdir = argv.tempdir
-        # tell ghostscript where to make temp files
-        os.environ.update({'TMPDIR': argv.tempdir})
 
     if not which('pdftops'):   # use poppler to create a .ps
         raise Exception("need pdftops from poppler")
     if not which('ps2pdf'):    # and use ghostscript to create a .pdf
         raise Exception("need ps2pdf from ghostscript")
 
-    postscript = tempfile.mkstemp(suffix='.ps', prefix='popgho')[1]
+    tempdir = tempfile.mkdtemp(prefix='popgho')
+    os.environ.update({'TMPDIR': tempdir})  # for ghostscript
+    postscript = os.path.join(tempdir, 'poppler.ps')
     o_pdf = argv.before[0]
-    n_pdf = "".join([o_pdf, '.new.pdf'])
-
+    n_pdf = os.path.join(tempdir, 'ghost.pdf')
 
     # swallow all stderr and stdout
     with open(os.devnull, "w") as f:
@@ -179,3 +178,4 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
+
