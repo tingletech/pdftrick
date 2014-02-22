@@ -1,5 +1,38 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
+
+"""
+One weird PDF trick
+===================
+
+I have some really large PDF files of manuscript materials with
+OCR.  10,000 pages worth and I don't have enough room for them.
+They are in the 50M to 500M range per file.  And they need to be up
+this week for a grant deadline.  So I'm looking around the google
+for some way to shrink the pdf files.  I came across this:
+[askubuntu](http://askubuntu.com/a/243753)
+
+    pdf2ps input.pdf output.ps
+    ps2pdf output.ps output.pdf
+
+Okay, about 8× compression!  Great, convert to postscript and back.
+The project manager asks "is the OCR still good?"  I rip the text.
+a n d  i t  h as a l l  t h i s  w e i r d spaces in it.
+
+Long and the short of it: I found that if I use `pdftops` from
+[Poppler](http://poppler.freedesktop.org) to create the postscript
+file but use `ps2pdf` from [Ghostscript](http://www.ghostscript.com)
+to create the new PDF file; I still get 8× compression, and the OCR
+looks the same as before.  I guess poppler is better at writing
+postscript, and that ghostscript is better at writting PDF.
+
+[This script](https://github.com/tingletech/pdftrick) automates the
+process of running poppler and then ghostscript on a PDF to get
+this magic.
+
+
+"""
+
 from __future__ import division
 import sys
 import argparse
@@ -7,35 +40,50 @@ import tempfile
 import subprocess
 import os
 import shutil
-from StringIO import StringIO
-from pprint import pprint as pp
 
-
-# http://stackoverflow.com/a/11541495/1763984
-def extant_file(x):
-    """'Type' for argparse - checks that file exists but does not open. """
-    if not os.path.exists(x):
-        raise argparse.ArgumentError("{0} does not exist".format(x))
-    return x
 
 def main(argv=None):
+    """
+        usage: pdftrick [-h] before [after]
+
+        one weird PDF trick
+
+        positional arguments:
+          before      PDF (before)
+          after       PDF (after)
+ 
+        optional arguments:
+          -h, --help  show this help message and exit
+
+    First argument is the PDF file you want to shrink.
+
+    Second argument is optional.
+
+    If one argement is given, the large file is replaced with a new
+    smaller file if the compression ratio is greater than 1.2.
+
+    If two arguments are given, the second argument is the path
+    to put the output file.
+
+    """
 
     parser = argparse.ArgumentParser(description="one weird PDF trick")
-    parser.add_argument('before', nargs=1, help="PDF (before)", type=extant_file)
+    parser.add_argument('before', nargs=1, help="PDF (before)",
+                        type=extant_file)
     parser.add_argument('after', nargs="?", help="PDF (after)")
-    # TODO argument: compression ratio cutoff
-    # TODO argument: logging
+    # * TODO argument: compression ratio cutoff
+    # * TODO argument: logging
     if argv is None:
         argv = parser.parse_args()
 
     if not which('pdftops'):   # use poppler to create a .ps
-        raise error("need pdftops from poppler")
+        raise Exception("need pdftops from poppler")
     if not which('ps2pdf'):    # and use ghostscript to create a .pdf
-        raise error("need ps2pdf from ghostscript")
+        raise Exception("need ps2pdf from ghostscript")
 
     postscript = tempfile.mkstemp(suffix='.ps', prefix='popgho')[1]
     o_pdf = argv.before[0]
-    n_pdf = "".join([o_pdf,'.new.pdf'])
+    n_pdf = "".join([o_pdf, '.new.pdf'])
 
     # swallow all stderr and stdout
     with open(os.devnull, "w") as f:
@@ -50,17 +98,21 @@ def main(argv=None):
 
     if (argv.after):
         shutil.move(n_pdf, argv.after)
-        print "compression: {1}; created: {0}".format(argv.after, compression_ratio)
+        print("compression: {1}; created: {0}"
+              .format(argv.after, compression_ratio))
     elif (compression_ratio > 1.2):
         shutil.move(n_pdf, o_pdf)
-        print "compression: {1}; overwrite: {0}".format(o_pdf, compression_ratio)
+        print("compression: {1}; overwrite: {0}"
+              .format(o_pdf, compression_ratio))
     else:
         os.remove(postscript)
-        print "compression: {0}; not worth it, deleted new file".format(compression_ratio)
+        print("compression: {0}; not worth it, deleted new file"
+              .format(compression_ratio))
 
-# http://stackoverflow.com/a/377028/1763984
+
 def which(program):
-    import os
+    """like the unix `which` command"""
+    # [stackoverflow](http://stackoverflow.com/a/377028/1763984)
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
@@ -76,6 +128,15 @@ def which(program):
                 return exe_file
 
     return None
+
+
+def extant_file(x):
+    """`Type` for argparse - checks that file exists but does not open. """
+    # [stackoverflow](http://stackoverflow.com/a/11541495/1763984)
+    if not os.path.exists(x):
+        raise argparse.ArgumentError("{0} does not exist".format(x))
+    return x
+
 
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
