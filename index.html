@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
-  <title>pdftrick.py | One weird PDF trick</title>
+  <title>One weird PDF trick | pdftrick.py</title>
   <link rel="stylesheet" href="pycco.css">
 </head>
 <body>
@@ -17,7 +17,8 @@
       <div class='octowrap'>
         <a class='octothorpe' href='#section-0'>#</a>
       </div>
-      <h1>One weird PDF trick</h1>
+      <p><a href="https://github.com/tingletech/pdftrick">github</a> <a href="https://pypi.python.org/pypi/pdftrick">pypi</a></p>
+<h1>One weird PDF trick</h1>
 <p>I have some really large PDF files of manuscript materials with
 OCR.  10,000 pages worth and I don't have enough room for them.
 They are in the 50M to 500M range per file.  And they need to be up
@@ -36,9 +37,8 @@ file but use <code>ps2pdf</code> from <a href="http://www.ghostscript.com">Ghost
 to create the new PDF file; I still get 8× compression, and the OCR
 looks the same as before.  I guess poppler is better at writing
 postscript, and that ghostscript is better at writting PDF.</p>
-<p><a href="https://github.com/tingletech/pdftrick">This script</a> automates the
-process of running poppler and then ghostscript on a PDF to get
-this magic.</p>
+<p>This script automates the process of running poppler and then
+ghostscript on a PDF to get this magic.</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre></pre></div>
@@ -59,7 +59,8 @@ this magic.</p>
 <span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">shutil</span></pre></div>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">contextlib</span></pre></div>
     </div>
   </div>
   <div class='clearall'></div>
@@ -78,6 +79,7 @@ positional arguments:
 
 optional arguments:
   -h, --help  show this help message and exit
+  -t TEMPDIR, --tempdir TEMPDIR
 </code></pre>
 <p>First argument is the PDF file you want to shrink.</p>
 <p>Second argument is optional.</p>
@@ -102,7 +104,8 @@ to put the output file.</p>
       <div class="highlight"><pre>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s">&quot;one weird PDF trick&quot;</span><span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;before&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;PDF (before)&quot;</span><span class="p">,</span>
                         <span class="nb">type</span><span class="o">=</span><span class="n">extant_file</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;after&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s">&quot;?&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;PDF (after)&quot;</span><span class="p">)</span></pre></div>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;after&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s">&quot;?&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;PDF (after)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-t&#39;</span><span class="p">,</span> <span class="s">&#39;--tempdir&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span></pre></div>
     </div>
   </div>
   <div class='clearall'></div>
@@ -120,14 +123,8 @@ to put the output file.</p>
       <div class="highlight"><pre>    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">argv</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;pdftops&#39;</span><span class="p">):</span>   <span class="c"># use poppler to create a .ps</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need pdftops from poppler&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;ps2pdf&#39;</span><span class="p">):</span>    <span class="c"># and use ghostscript to create a .pdf</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need ps2pdf from ghostscript&quot;</span><span class="p">)</span>
-
-    <span class="n">postscript</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.ps&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;popgho&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">o_pdf</span> <span class="o">=</span> <span class="n">argv</span><span class="o">.</span><span class="n">before</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">n_pdf</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">o_pdf</span><span class="p">,</span> <span class="s">&#39;.new.pdf&#39;</span><span class="p">])</span></pre></div>
+    <span class="k">if</span> <span class="n">argv</span><span class="o">.</span><span class="n">tempdir</span><span class="p">:</span>
+        <span class="n">tempfile</span><span class="o">.</span><span class="n">tempdir</span> <span class="o">=</span> <span class="n">argv</span><span class="o">.</span><span class="n">tempdir</span></pre></div>
     </div>
   </div>
   <div class='clearall'></div>
@@ -136,14 +133,48 @@ to put the output file.</p>
       <div class='octowrap'>
         <a class='octothorpe' href='#section-5'>#</a>
       </div>
-      <p>swallow all stderr and stdout</p>
+      <p>check that we have the tools we are wrapping</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;pdftops&#39;</span><span class="p">):</span>   <span class="c"># use poppler to create a .ps</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need pdftops from poppler&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">which</span><span class="p">(</span><span class="s">&#39;ps2pdf&#39;</span><span class="p">):</span>    <span class="c"># and use ghostscript to create a .pdf</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;need ps2pdf from ghostscript&quot;</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">make_temp_directory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">&#39;popgho&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tempdir</span><span class="p">:</span>
+        <span class="n">main_with_temp</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="n">argv</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">main_with_temp</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;TMPDIR&#39;</span><span class="p">:</span> <span class="n">tempdir</span><span class="p">})</span>  <span class="c"># for ghostscript</span>
+    <span class="n">postscript</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="s">&#39;poppler.ps&#39;</span><span class="p">)</span>
+    <span class="n">o_pdf</span> <span class="o">=</span> <span class="n">argv</span><span class="o">.</span><span class="n">before</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_pdf</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tempdir</span><span class="p">,</span> <span class="s">&#39;ghost.pdf&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>swallow all stderr and stdout <a href="http://stackoverflow.com/a/12503246/1763984">stackoverflow</a></p>
     </div>
     <div class='code'>
       <div class="highlight"><pre>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s">&#39;pdftops&#39;</span><span class="p">,</span> <span class="n">o_pdf</span><span class="p">,</span> <span class="n">postscript</span><span class="p">],</span>
                               <span class="n">stdout</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s">&#39;ps2pdf&#39;</span><span class="p">,</span> <span class="n">postscript</span><span class="p">,</span> <span class="n">n_pdf</span><span class="p">],</span>
-                              <span class="n">stdout</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+                              <span class="n">stdout</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">)</span>
 
     <span class="n">o_size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">o_pdf</span><span class="p">)</span>
     <span class="n">n_size</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">n_pdf</span><span class="p">)</span>
@@ -158,16 +189,17 @@ to put the output file.</p>
         <span class="k">print</span><span class="p">(</span><span class="s">&quot;compression: {1}; overwrite: {0}&quot;</span>
               <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">o_pdf</span><span class="p">,</span> <span class="n">compression_ratio</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">postscript</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">n_pdf</span><span class="p">)</span>
         <span class="k">print</span><span class="p">(</span><span class="s">&quot;compression: {0}; not worth it, deleted new file&quot;</span>
-              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression_ratio</span><span class="p">))</span></pre></div>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression_ratio</span><span class="p">))</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">postscript</span><span class="p">)</span></pre></div>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-6'>
+  <div class='section' id='section-8'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-6'>#</a>
+        <a class='octothorpe' href='#section-8'>#</a>
       </div>
       <p>like the unix <code>which</code> command</p>
     </div>
@@ -176,10 +208,10 @@ to put the output file.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-7'>
+  <div class='section' id='section-9'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-7'>#</a>
+        <a class='octothorpe' href='#section-9'>#</a>
       </div>
       <p><a href="http://stackoverflow.com/a/377028/1763984">stackoverflow</a></p>
     </div>
@@ -202,10 +234,10 @@ to put the output file.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-8'>
+  <div class='section' id='section-10'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-8'>#</a>
+        <a class='octothorpe' href='#section-10'>#</a>
       </div>
       <p><code>Type</code> for argparse - checks that file exists but does not open.</p>
     </div>
@@ -214,10 +246,10 @@ to put the output file.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-9'>
+  <div class='section' id='section-11'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-9'>#</a>
+        <a class='octothorpe' href='#section-11'>#</a>
       </div>
       <p><a href="http://stackoverflow.com/a/11541495/1763984">stackoverflow</a></p>
     </div>
@@ -228,10 +260,37 @@ to put the output file.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-10'>
+  <div class='section' id='section-12'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-10'>#</a>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <p>way to clean up a temporary folder</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="nd">@contextlib.contextmanager</span>
+<span class="k">def</span> <span class="nf">make_temp_directory</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <p><a href="http://stackoverflow.com/a/13379969/1763984">stackoverflow</a></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">temp_dir</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
       </div>
       <p>main() idiom for importing into REPL for debugging</p>
     </div>
@@ -241,10 +300,10 @@ to put the output file.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-11'>
+  <div class='section' id='section-15'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-11'>#</a>
+        <a class='octothorpe' href='#section-15'>#</a>
       </div>
       <p>Copyright © 2014, Regents of the University of California
 All rights reserved.</p>
