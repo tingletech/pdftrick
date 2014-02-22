@@ -2,6 +2,8 @@
 # -*- coding: utf8 -*-
 
 """
+[github](https://github.com/tingletech/pdftrick) [pypi](https://pypi.python.org/pypi/pdftrick)
+
 One weird PDF trick
 ===================
 
@@ -26,9 +28,8 @@ to create the new PDF file; I still get 8× compression, and the OCR
 looks the same as before.  I guess poppler is better at writing
 postscript, and that ghostscript is better at writting PDF.
 
-[This script](https://github.com/tingletech/pdftrick) automates the
-process of running poppler and then ghostscript on a PDF to get
-this magic.
+This script automates the process of running poppler and then
+ghostscript on a PDF to get this magic.
 
 
 """
@@ -98,7 +99,7 @@ def main_with_temp(tempdir, argv):
     o_pdf = argv.before[0]
     n_pdf = os.path.join(tempdir, 'ghost.pdf')
 
-    # swallow all stderr and stdout
+    # swallow all stderr and stdout [stackoverflow](http://stackoverflow.com/a/12503246/1763984)
     with open(os.devnull, "w") as f:
         subprocess.check_call(['pdftops', o_pdf, postscript],
                               stdout=f, stderr=f)
@@ -125,8 +126,9 @@ def main_with_temp(tempdir, argv):
 
 
 def which(program):
-    """like the unix `which` command"""
-    # [stackoverflow](http://stackoverflow.com/a/377028/1763984)
+    """like the unix `which` command 
+    [stackoverflow](http://stackoverflow.com/a/377028/1763984)
+    """
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
@@ -145,8 +147,9 @@ def which(program):
 
 
 def extant_file(x):
-    """`Type` for argparse - checks that file exists but does not open. """
-    # [stackoverflow](http://stackoverflow.com/a/11541495/1763984)
+    """`Type` for argparse - checks that file exists but does not open. 
+    [stackoverflow](http://stackoverflow.com/a/11541495/1763984)
+    """
     if not os.path.exists(x):
         raise argparse.ArgumentError("{0} does not exist".format(x))
     return x
