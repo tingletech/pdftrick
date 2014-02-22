@@ -71,10 +71,17 @@ def main(argv=None):
     parser.add_argument('before', nargs=1, help="PDF (before)",
                         type=extant_file)
     parser.add_argument('after', nargs="?", help="PDF (after)")
+    parser.add_argument('-t', '--tempdir', required=False)
     # * TODO argument: compression ratio cutoff
     # * TODO argument: logging
     if argv is None:
         argv = parser.parse_args()
+
+    if argv.tempdir:
+        # tell python tempfile where to make temp files
+        tempfile.tempdir = argv.tempdir
+        # tell ghostscript where to make temp files
+        os.environ.update({'TMPDIR': argv.tempdir})
 
     if not which('pdftops'):   # use poppler to create a .ps
         raise Exception("need pdftops from poppler")
@@ -85,12 +92,13 @@ def main(argv=None):
     o_pdf = argv.before[0]
     n_pdf = "".join([o_pdf, '.new.pdf'])
 
+
     # swallow all stderr and stdout
     with open(os.devnull, "w") as f:
         subprocess.check_call(['pdftops', o_pdf, postscript],
                               stdout=f, stderr=f)
         subprocess.check_call(['ps2pdf', postscript, n_pdf],
-                              stdout=f, stderr=f)
+                              stdout=f, stderr=f, env=os.environ)
 
     o_size = os.path.getsize(o_pdf)
     n_size = os.path.getsize(n_pdf)
@@ -105,9 +113,10 @@ def main(argv=None):
         print("compression: {1}; overwrite: {0}"
               .format(o_pdf, compression_ratio))
     else:
-        os.remove(postscript)
+        os.remove(n_pdf)
         print("compression: {0}; not worth it, deleted new file"
               .format(compression_ratio))
+    os.remove(postscript)
 
 
 def which(program):
