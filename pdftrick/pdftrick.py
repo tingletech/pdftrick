@@ -25,11 +25,16 @@ Long and the short of it: I found that if I use `pdftops` from
 [Poppler](http://poppler.freedesktop.org) to create the postscript
 file but use `ps2pdf` from [Ghostscript](http://www.ghostscript.com)
 to create the new PDF file; I still get 8× compression, and the OCR
-looks the same as before.  I guess poppler is better at writing
+looks the same as before[^footnote].  I guess poppler is better at writing
 postscript, and that ghostscript is better at writting PDF.
 
 This script automates the process of running poppler and then
 ghostscript on a PDF to get this magic.
+
+[^footnote]: as I check more files in the batch, I'm finding that
+for some this process does introduce extra spaces between letters
+as well; however, it seems to be to a lesser degree than doing both
+steps with ghostscript.
 
 
 """
