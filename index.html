@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
-  <title>One weird PDF trick | pdftrick.py</title>
+  <title>pdftrick.py</title>
   <link rel="stylesheet" href="pycco.css">
 </head>
 <body>
@@ -35,10 +35,14 @@ a n d  i t  h as a l l  t h i s  w e i r d spaces in it.</p>
 <a href="http://poppler.freedesktop.org">Poppler</a> to create the postscript
 file but use <code>ps2pdf</code> from <a href="http://www.ghostscript.com">Ghostscript</a>
 to create the new PDF file; I still get 8× compression, and the OCR
-looks the same as before.  I guess poppler is better at writing
+looks the same as before[^footnote].  I guess poppler is better at writing
 postscript, and that ghostscript is better at writting PDF.</p>
 <p>This script automates the process of running poppler and then
 ghostscript on a PDF to get this magic.</p>
+<p>[^footnote]: as I check more files in the batch, I'm finding that
+for some this process does introduce extra spaces between letters
+as well; however, it seems to be to a lesser degree than doing both
+steps with ghostscript.</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre></pre></div>
