@@ -51,17 +51,6 @@ import contextlib
 
 def main(argv=None):
     """
-        usage: pdftrick [-h] before [after]
-
-        one weird PDF trick
-
-        positional arguments:
-          before      PDF (before)
-          after       PDF (after)
-
-        optional arguments:
-          -h, --help  show this help message and exit
-          -t TEMPDIR, --tempdir TEMPDIR
 
     First argument is the PDF file you want to shrink.
 
@@ -79,7 +68,21 @@ def main(argv=None):
     parser.add_argument('before', nargs=1, help="PDF (before)",
                         type=extant_file)
     parser.add_argument('after', nargs="?", help="PDF (after)")
-    parser.add_argument('-t', '--tempdir', required=False)
+    parser.add_argument('-t', '--tempdir', help="needs a lot of temp space", required=False)
+    """
+        usage: pdftrick [-h] [-t TEMPDIR] before [after]
+
+        one weird PDF trick
+
+        positional arguments:
+          before                PDF (before)
+          after                 PDF (after)
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -t TEMPDIR, --tempdir TEMPDIR
+                                needs a lot of temp space
+    """
     # * TODO argument: compression ratio cutoff
     # * TODO argument: logging
     if argv is None:
