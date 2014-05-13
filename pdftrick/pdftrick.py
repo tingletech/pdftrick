@@ -47,6 +47,7 @@ import subprocess
 import os
 import shutil
 import contextlib
+import shlex
 
 
 def main(argv=None):
@@ -69,6 +70,8 @@ def main(argv=None):
                         type=extant_file)
     parser.add_argument('after', nargs="?", help="PDF (after)")
     parser.add_argument('-t', '--tempdir', help="needs a lot of temp space", required=False)
+    parser.add_argument('--pdftops_opts', help="options for pdftops command", required=False)
+    parser.add_argument('--ps2pdf_opts', help="options for ps2pdf command", required=False)
     """
         usage: pdftrick [-h] [-t TEMPDIR] before [after]
 
@@ -106,12 +109,18 @@ def main_with_temp(tempdir, argv):
     postscript = os.path.join(tempdir, 'poppler.ps')
     o_pdf = argv.before[0]
     n_pdf = os.path.join(tempdir, 'ghost.pdf')
+    pdftops_opts = []
+    ps2pdf_opts = []
+    if argv.ps2pdf_opts is not None:
+        ps2pdf_opts = shlex.split(argv.ps2pdf_opts)
+    if argv.pdftops_opts is not None:
+        pdftops_opts = shlex.split(argv.pdftops_opts)
 
     # swallow all stderr and stdout [stackoverflow](http://stackoverflow.com/a/12503246/1763984)
     with open(os.devnull, "w") as f:
-        subprocess.check_call(['pdftops', o_pdf, postscript],
+        subprocess.check_call(['pdftops'] + pdftops_opts + [o_pdf, postscript],
                               stdout=f, stderr=f)
-        subprocess.check_call(['ps2pdf', postscript, n_pdf],
+        subprocess.check_call(['ps2pdf'] + ps2pdf_opts + [postscript, n_pdf],
                               stdout=f, stderr=f, env=os.environ)
 
     o_size = os.path.getsize(o_pdf)
