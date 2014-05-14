@@ -26,7 +26,27 @@ def main(argv=None):
         stat_pdf(path)
 
 
+# target platform had 2.6
+# http://stackoverflow.com/questions/17539985/check-output-error-in-python
+def check_output(*popenargs, **kwargs):
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, unused_err = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        error = subprocess.CalledProcessError(retcode, cmd)
+        error.output = output
+        raise error
+    return output
+
+
 def stat_pdf(path):
+    try:
+        subprocess.check_output
+    except:
+        subprocess.check_output = check_output
     output = subprocess.check_output(['pdfinfo', path])
     pages = int(re.search('Pages:\s*(\d*)', output).group(1))
     byts = float(re.search('File size:\s*(\d*)\sbytes', output).group(1))
