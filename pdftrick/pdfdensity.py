@@ -54,7 +54,7 @@ def stat_pdf(path):
     megs = byts / mb
     out = path
     out = out + '\t%.2f MB' % round(megs,2)
-    out = out + '\t{} pages'.format(pages)
+    out = out + '\t{0} pages'.format(pages)
     out = out + '\t%.2f pages per MB' % round(pages/megs, 2)
     out = out + '\t%.2f MB per page' % round(megs/pages, 2)
     print out
