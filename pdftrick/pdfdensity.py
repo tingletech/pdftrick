@@ -57,7 +57,7 @@ def stat_pdf(path):
     out = out + '\t{0} pages'.format(pages)
     out = out + '\t%.2f pages per MB' % round(pages/megs, 2)
     out = out + '\t%.2f MB per page' % round(megs/pages, 2)
-    print out
+    print out 
 
 
 def extant_file(x):
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     sys.exit(main())
 
 """
-Copyright © 2014, Regents of the University of California
+Copyright © 2018, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
