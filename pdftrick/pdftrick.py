@@ -79,7 +79,6 @@ def main(argv=None):
     parser.add_argument(
         '--ps2pdf_opts', help="options for ps2pdf command", required=False)
     parser.add_argument(
-    # '--timeout', help="timeout in seconds for pdftops and ps2pdf commands [default 300]", required=False, type=int, default=300)
         '--timeout', help="timeout in seconds for pdftops and ps2pdf commands [default 300]", required=False, type=int)
     """
         usage: pdftrick [-h] [-t TEMPDIR] before [after]
@@ -116,7 +115,7 @@ def main(argv=None):
         raise Exception("need ps2pdf from ghostscript")
 
     with make_temp_directory(prefix='popgho') as tempdir:
-        main_with_temp(tempdir, argv)
+        return main_with_temp(tempdir, argv)
 
 
 def main_with_temp(tempdir, argv):
@@ -131,30 +130,27 @@ def main_with_temp(tempdir, argv):
     if argv.pdftops_opts is not None:
         pdftops_opts = shlex.split(argv.pdftops_opts)
 
+    # compose commands
+    pdftops = ['pdftops'] + pdftops_opts + [o_pdf, postscript]
+    ps2pdf = ['ps2pdf'] + ps2pdf_opts + [postscript, n_pdf]
+
     # swallow all stderr and stdout [stackoverflow](http://stackoverflow.com/a/12503246/1763984)
     with open(os.devnull, "w") as f:
         try:
             subprocess.check_call(
-                ['pdftops'] + pdftops_opts + [o_pdf, postscript],
+                pdftops,
                 stdout=f,
                 stderr=f,
                 timeout=argv.timeout)
             subprocess.check_call(
-                ['ps2pdf'] + ps2pdf_opts + [postscript, n_pdf],
+                ps2pdf,
                 stdout=f,
                 stderr=f,
                 timeout=argv.timeout,
                 env=os.environ)
         except subprocess.TimeoutExpired as e:
             print(e)
-            exit(0)
-        # https://stackoverflow.com/a/6886556/1763984
-        finally:
-            try:
-                shutil.rmtree(tempdir)  # delete directory
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:  # ENOENT - no such file or directory
-                    raise  # re-raise exception
+            return 0
 
     o_size = os.path.getsize(o_pdf)
     n_size = os.path.getsize(n_pdf)
