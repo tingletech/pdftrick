@@ -145,6 +145,9 @@ def main_with_temp(tempdir, argv):
                 stderr=f,
                 timeout=argv.timeout,
                 env=os.environ)
+        except subprocess.TimeoutExpired as e:
+            print(e)
+            exit(0)
         # https://stackoverflow.com/a/6886556/1763984
         finally:
             try:
