@@ -100,7 +100,6 @@ def main(argv=None):
           --timeout TIMEOUT     timeout in seconds for pdftops and ps2pdf commands
                                 [default 300]
     """
-    compression_ratio_cutoff = 1.2
     # * TODO argument: logging
     if argv is None:
         argv = parser.parse_args()
@@ -119,6 +118,7 @@ def main(argv=None):
 
 
 def main_with_temp(tempdir, argv):
+    compression_ratio_cutoff = 1.2
     os.environ.update({'TMPDIR': tempdir})  # for ghostscript
     postscript = os.path.join(tempdir, 'poppler.ps')
     o_pdf = argv.before[0]
