@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-
 """
 [github](https://github.com/tingletech/pdftrick) [pypi](https://pypi.python.org/pypi/pdftrick)
 
@@ -39,15 +38,19 @@ steps with ghostscript.
 
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import sys
 import argparse
 import tempfile
-import subprocess
 import os
 import shutil
 import contextlib
 import shlex
+
+if os.name == 'posix' and sys.version_info[0] < 3:
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 
 def main(argv=None):
@@ -66,12 +69,17 @@ def main(argv=None):
     """
 
     parser = argparse.ArgumentParser(description="one weird PDF trick")
-    parser.add_argument('before', nargs=1, help="PDF (before)",
-                        type=extant_file)
+    parser.add_argument(
+        'before', nargs=1, help="PDF (before)", type=extant_file)
     parser.add_argument('after', nargs="?", help="PDF (after)")
-    parser.add_argument('-t', '--tempdir', help="needs a lot of temp space", required=False)
-    parser.add_argument('--pdftops_opts', help="options for pdftops command", required=False)
-    parser.add_argument('--ps2pdf_opts', help="options for ps2pdf command", required=False)
+    parser.add_argument(
+        '-t', '--tempdir', help="needs a lot of temp space", required=False)
+    parser.add_argument(
+        '--pdftops_opts', help="options for pdftops command", required=False)
+    parser.add_argument(
+        '--ps2pdf_opts', help="options for ps2pdf command", required=False)
+    parser.add_argument(
+        '--timeout', help="timeout in seconds for pdftops and ps2pdf commands [default 300]", required=False, type=int)
     """
         usage: pdftrick [-h] [-t TEMPDIR] before [after]
 
@@ -85,8 +93,13 @@ def main(argv=None):
           -h, --help            show this help message and exit
           -t TEMPDIR, --tempdir TEMPDIR
                                 needs a lot of temp space
+          --pdftops_opts PDFTOPS_OPTS
+                                options for pdftops command
+          --ps2pdf_opts PS2PDF_OPTS
+                                options for ps2pdf command
+          --timeout TIMEOUT     timeout in seconds for pdftops and ps2pdf commands
+                                [default 300]
     """
-    # * TODO argument: compression ratio cutoff
     # * TODO argument: logging
     if argv is None:
         argv = parser.parse_args()
@@ -95,16 +108,17 @@ def main(argv=None):
         tempfile.tempdir = argv.tempdir
 
     # check that we have the tools we are wrapping
-    if not which('pdftops'):   # use poppler to create a .ps
+    if not which('pdftops'):  # use poppler to create a .ps
         raise Exception("need pdftops from poppler")
-    if not which('ps2pdf'):    # and use ghostscript to create a .pdf
+    if not which('ps2pdf'):  # and use ghostscript to create a .pdf
         raise Exception("need ps2pdf from ghostscript")
 
     with make_temp_directory(prefix='popgho') as tempdir:
-        main_with_temp(tempdir, argv)
+        return main_with_temp(tempdir, argv)
 
 
 def main_with_temp(tempdir, argv):
+    compression_ratio_cutoff = 1.2
     os.environ.update({'TMPDIR': tempdir})  # for ghostscript
     postscript = os.path.join(tempdir, 'poppler.ps')
     o_pdf = argv.before[0]
@@ -116,25 +130,40 @@ def main_with_temp(tempdir, argv):
     if argv.pdftops_opts is not None:
         pdftops_opts = shlex.split(argv.pdftops_opts)
 
+    # compose commands
+    pdftops = ['pdftops'] + pdftops_opts + [o_pdf, postscript]
+    ps2pdf = ['ps2pdf'] + ps2pdf_opts + [postscript, n_pdf]
+
     # swallow all stderr and stdout [stackoverflow](http://stackoverflow.com/a/12503246/1763984)
     with open(os.devnull, "w") as f:
-        subprocess.check_call(['pdftops'] + pdftops_opts + [o_pdf, postscript],
-                              stdout=f, stderr=f)
-        subprocess.check_call(['ps2pdf'] + ps2pdf_opts + [postscript, n_pdf],
-                              stdout=f, stderr=f, env=os.environ)
+        try:
+            subprocess.check_call(
+                pdftops,
+                stdout=f,
+                stderr=f,
+                timeout=argv.timeout)
+            subprocess.check_call(
+                ps2pdf,
+                stdout=f,
+                stderr=f,
+                timeout=argv.timeout,
+                env=os.environ)
+        except subprocess.TimeoutExpired as e:
+            print(e)
+            return 0
 
     o_size = os.path.getsize(o_pdf)
     n_size = os.path.getsize(n_pdf)
-    compression_ratio = o_size/n_size
+    compression_ratio = o_size / n_size
 
     if (argv.after):
         shutil.move(n_pdf, argv.after)
-        print("compression: {1}; created: {0}"
-              .format(argv.after, compression_ratio))
-    elif (compression_ratio > 1.2):
+        print("compression: {1}; created: {0}".format(argv.after,
+                                                      compression_ratio))
+    elif (compression_ratio > compression_ratio_cutoff):
         shutil.move(n_pdf, o_pdf)
-        print("compression: {1}; overwrite: {0}"
-              .format(o_pdf, compression_ratio))
+        print("compression: {1}; overwrite: {0}".format(
+            o_pdf, compression_ratio))
     else:
         os.remove(n_pdf)
         print("compression: {0}; not worth it, deleted new file"
@@ -146,6 +175,7 @@ def which(program):
     """like the unix `which` command 
     [stackoverflow](http://stackoverflow.com/a/377028/1763984)
     """
+
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
@@ -185,9 +215,8 @@ def make_temp_directory(prefix):
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
-
 """
-Copyright © 2014, Regents of the University of California
+Copyright © 2018, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

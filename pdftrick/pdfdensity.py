@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 
-from __future__ import division
+from __future__ import division, print_function
 import sys
 import argparse
 import subprocess
@@ -47,7 +47,7 @@ def stat_pdf(path):
         subprocess.check_output
     except:
         subprocess.check_output = check_output
-    output = subprocess.check_output(['pdfinfo', path])
+    output = subprocess.check_output(['pdfinfo', path]).decode('utf-8')
     pages = int(re.search('Pages:\s*(\d*)', output).group(1))
     byts = float(re.search('File size:\s*(\d*)\sbytes', output).group(1))
     mb = 1<<20
@@ -57,7 +57,7 @@ def stat_pdf(path):
     out = out + '\t{0} pages'.format(pages)
     out = out + '\t%.2f pages per MB' % round(pages/megs, 2)
     out = out + '\t%.2f MB per page' % round(megs/pages, 2)
-    print out
+    print(out)
 
 
 def extant_file(x):
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     sys.exit(main())
 
 """
-Copyright © 2014, Regents of the University of California
+Copyright © 2018, Regents of the University of California
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
