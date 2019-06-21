@@ -148,7 +148,7 @@ def main_with_temp(tempdir, argv):
                 stderr=f,
                 timeout=argv.timeout,
                 env=os.environ)
-        except subprocess.TimeoutExpired as e:
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
             print(e)
             return 0
 
