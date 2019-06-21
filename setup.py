@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 setup(
     name='pdftrick',
-    version = "0.0.4",
+    version = "0.0.5",
     description = "One weird PDF trick",
     url='https://github.com/tingletech/pdftrick',
-    download_url = 'https://github.com/tingletech/pdftrick/tarball/0.0.4',
+    download_url = 'https://github.com/tingletech/pdftrick/tarball/0.0.5',
     author="Brian Tingle",
     author_email="brian.tingle.cdlib.org@gmail.com",
     license = "BSD",
